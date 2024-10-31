@@ -1,8 +1,26 @@
 #include <AccelStepper.h>
 
-const int dirPin = 2; //direction Pin
-const int stepPin = 3; //pulse Pin
-const int enPin = 4; //enable Pin
+const int dirPinStepper1 = 2; //direction Pin (DIR+)
+const int stepPinStepper1 = 3; //pulse Pin (PUL+)
+const int enPinStepper1 = 4; //enable Pin (ENA+)
+
+const int dirPinStepper2 = 6; //direction Pin (DIR+))
+const int stepPinStepper2 = 7; //pulse Pin (PUL+)
+const int enPinStepper2 = 5; //enable Pin (ENA+)
+
+const int dirPinStepper3 = 9; //direction Pin (DIR+))
+const int stepPinStepper3 = 8; //pulse Pin (PUL+)
+const int enPinStepper3 = 10; //enable Pin (ENA+)
+
+// Motor Driver 1
+// Pinouts (D3 (PUL+), D4 (ENA+), D2 (DIR+))
+
+// Motor Driver 2
+// Pinouts (D5 (ENA+), D6 (DIR+), D7 (PUL+))
+
+// Motor Driver 3
+// Pinouts (D8 (PUL+), D9 (DIR+), D10 (ENA+))
+
 
 // PID constants (students can edit these to adjust accuracy)
 float kp = 1; //*1
@@ -10,7 +28,9 @@ float kd = 0.025; //*2
 float ki = 0.5; //*3
 int output = 0; //output from PID algorithm
 
-AccelStepper stepper(AccelStepper::DRIVER, stepPin, dirPin); //create instance of stepper
+AccelStepper stepper1(AccelStepper::DRIVER, stepPinStepper1, dirPinStepper1); //create instance of stepper
+AccelStepper stepper2(AccelStepper::DRIVER, stepPinStepper2, dirPinStepper2); //create instance of stepper
+AccelStepper stepper3(AccelStepper::DRIVER, stepPinStepper3, dirPinStepper3); //create instance of stepper
 
 long prevT = 0; //previous time
 float errorPrev = 0; //previous error
@@ -23,14 +43,24 @@ float integral = 0; //integral term
 
 void setup() {
   Serial.begin(9600);
-  stepper.disableOutputs(); //disable outputs initially
-  stepper.setMaxSpeed(10000);
-  stepper.setCurrentPosition(0); //zero current stepper position
-  stepper.enableOutputs(); //enable outputs for motor
+  stepper1.disableOutputs(); //disable outputs initially
+  stepper1.setMaxSpeed(10000);
+  stepper1.setCurrentPosition(0); //zero current stepper position
+  stepper1.enableOutputs(); //enable outputs for motor
   // pinMode(2,OUTPUT);
   // pinMode(3,OUTPUT);
   // digitalWrite(2,HIGH);
 
+  stepper2.disableOutputs(); //disable outputs initially
+  stepper2.setMaxSpeed(10000);
+  stepper2.setCurrentPosition(0); //zero current stepper position
+  stepper2.enableOutputs(); //enable outputs for motor
+
+  stepper3.disableOutputs(); //disable outputs initially
+  stepper3.setMaxSpeed(10000);
+  stepper3.setCurrentPosition(0); //zero current stepper position
+  stepper3.enableOutputs(); //enable outputs for motor
+  
 }
 
 void loop() {
@@ -78,12 +108,27 @@ void PID() {
   stepperTarget = (constrain(stepperTarget, -2400, 2400)); //clamps error down too maximum movable steps based on POT
   Serial.print("stepperTarget "); //prints motor's target steps
   Serial.println(stepperTarget);
-  stepper.move(stepperTarget);
+//  stepper.move(stepperTarget);
 
   // Moves motors for a certain time before repeating PID calculations
   long currT2 = millis();
   while (1) { // *5 the period of motor movement can be adjusted
-      stepper.setSpeed(3200); //*6 sets motor speed
-      stepper.runSpeed(); //steps the motor
+      stepper1.setSpeed(3200); //*6 sets motor speed
+      stepper1.runSpeed(); //steps the motor 
+
+      stepper2.setSpeed(3200); //*6 sets motor speed
+      stepper2.runSpeed(); //steps the motor 
+      
+      stepper3.setSpeed(3200); //*6 sets motor speed
+      stepper3.runSpeed(); //steps the motor 
  }
 }
+
+// Motor Driver 1
+// Pinouts (D3 (PUL+), D4 (ENA+), D2 (DIR+))
+
+// Motor Driver 2
+// Pinouts (D5 (ENA+), D6 (DIR+), D7 (PUL+))
+
+// Motor Driver 3
+// Pinouts (D8 (PUL+), D9 (DIR+), D10 (ENA+))
