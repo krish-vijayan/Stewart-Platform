@@ -27,10 +27,17 @@ void setup() {
   stepper.setMaxSpeed(10000);
   stepper.setCurrentPosition(0); //zero current stepper position
   stepper.enableOutputs(); //enable outputs for motor
+  // pinMode(2,OUTPUT);
+  // pinMode(3,OUTPUT);
+  // digitalWrite(2,HIGH);
+
 }
 
 void loop() {
   PID();
+  // digitalWrite(3,LOW);
+  // digitalWrite(3,HIGH);
+  // delayMicroseconds(60);
 }
 
 void PID() {
@@ -75,8 +82,8 @@ void PID() {
 
   // Moves motors for a certain time before repeating PID calculations
   long currT2 = millis();
-  while (analogRead(A0) < 1023 && analogRead(A0) > 0 && (millis() - currT2) < 50) { // *5 the period of motor movement can be adjusted
-      stepper.setSpeed(2* stepperTarget); //*6 sets motor speed
+  while (1) { // *5 the period of motor movement can be adjusted
+      stepper.setSpeed(3200); //*6 sets motor speed
       stepper.runSpeed(); //steps the motor
  }
 }

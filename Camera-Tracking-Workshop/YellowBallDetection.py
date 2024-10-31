@@ -19,7 +19,7 @@ def detect_yellow_ball():
             break
         
         # *2 Set the image resolution to 480x480. Note increasing resolution increases processing power used, and may slow down video feed.
-        frame = cv.resize(frame, (480, 480))
+        frame = cv.resize(frame, (1920, 1080))
 
         # Convert the frame from BGR to HSV color space to easily identify a colour
         hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV) 
