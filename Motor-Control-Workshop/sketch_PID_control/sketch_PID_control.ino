@@ -47,20 +47,23 @@ void setup() {
   stepper1.setMaxSpeed(10000);
   stepper1.setCurrentPosition(0); //zero current stepper position
   stepper1.enableOutputs(); //enable outputs for motor
+  stepper1.setAcceleration(3000);
   // pinMode(2,OUTPUT);
   // pinMode(3,OUTPUT);
   // digitalWrite(2,HIGH);
 
   stepper2.disableOutputs(); //disable outputs initially
-  stepper2.setMaxSpeed(10000);
+  stepper2.setMaxSpeed(20000);
   stepper2.setCurrentPosition(0); //zero current stepper position
   stepper2.enableOutputs(); //enable outputs for motor
 
   stepper3.disableOutputs(); //disable outputs initially
-  stepper3.setMaxSpeed(10000);
+  stepper3.setMaxSpeed(20000);
   stepper3.setCurrentPosition(0); //zero current stepper position
   stepper3.enableOutputs(); //enable outputs for motor
-  
+
+
+        
 }
 
 void loop() {
@@ -68,6 +71,10 @@ void loop() {
   // digitalWrite(3,LOW);
   // digitalWrite(3,HIGH);
   // delayMicroseconds(60);
+}
+
+float angleToStep(float angle){
+  return angle/360 * 3200;
 }
 
 void PID() {
@@ -113,14 +120,19 @@ void PID() {
   // Moves motors for a certain time before repeating PID calculations
   long currT2 = millis();
   while (1) { // *5 the period of motor movement can be adjusted
-      stepper1.setSpeed(3200); //*6 sets motor speed
-      stepper1.runSpeed(); //steps the motor 
+//      stepper1.setSpeed(6400); //*6 sets motor speed
+//      stepper1.runSpeed(); //steps the motor 
+//
+//      stepper2.setSpeed(6400); //*6 sets motor speed
+//      stepper2.runSpeed(); //steps the motor 
+//      
+//      stepper3.setSpeed(6400); //*6 sets motor speed
+//      stepper3.runSpeed(); //steps the motor 
+        stepper1.moveTo(angleToStep(720+360));
+        delay(1000);
 
-      stepper2.setSpeed(3200); //*6 sets motor speed
-      stepper2.runSpeed(); //steps the motor 
-      
-      stepper3.setSpeed(3200); //*6 sets motor speed
-      stepper3.runSpeed(); //steps the motor 
+        stepper1.runToPosition();
+        
  }
 }
 
