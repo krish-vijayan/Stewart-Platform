@@ -1,46 +1,37 @@
+#include "MotorDefs.h"
+
 #include <AccelStepper.h>
 
-const int dirPinStepper1 = 2; //direction Pin (DIR+)
-const int stepPinStepper1 = 3; //pulse Pin (PUL+)
-const int enPinStepper1 = 4; //enable Pin (ENA+)
+#include "pid.h"
 
-const int dirPinStepper2 = 6; //direction Pin (DIR+))
-const int stepPinStepper2 = 7; //pulse Pin (PUL+)
-const int enPinStepper2 = 5; //enable Pin (ENA+)
+// -------------- Global Definitions -----------------
+// Motor Angle Struct
+struct motorAngles motorAnglesObj;
 
-const int dirPinStepper3 = 9; //direction Pin (DIR+))
-const int stepPinStepper3 = 8; //pulse Pin (PUL+)
-const int enPinStepper3 = 10; //enable Pin (ENA+)
+// Global Ball Position
+float x_ball_pixel;
+float y_ball_pixel;
 
-// Motor Driver 1
-// Pinouts (D3 (PUL+), D4 (ENA+), D2 (DIR+))
-
-// Motor Driver 2
-// Pinouts (D5 (ENA+), D6 (DIR+), D7 (PUL+))
-
-// Motor Driver 3
-// Pinouts (D8 (PUL+), D9 (DIR+), D10 (ENA+))
-
-
-// PID constants (students can edit these to adjust accuracy)
-float kp = 1; //*1
-float kd = 0.025; //*2
-float ki = 0.5; //*3
+// PID Related Definitions
 int output = 0; //output from PID algorithm
+long prevT = 0; //previous time
+float errorPrev = 0; //previous error
+float integral = 0; //integral term
+
+// Calibration Related Consts
+float theta0 = -2.9;
+
+// I2C Pins
+const int SDA_Pin = 20;
+const int SCL_Pin = 21;
+const int ledPin = 13; // *** Change LED Pin here
+int LED_Byte = 0;
 
 AccelStepper stepper1(AccelStepper::DRIVER, stepPinStepper1, dirPinStepper1); //create instance of stepper
 AccelStepper stepper2(AccelStepper::DRIVER, stepPinStepper2, dirPinStepper2); //create instance of stepper
 AccelStepper stepper3(AccelStepper::DRIVER, stepPinStepper3, dirPinStepper3); //create instance of stepper
 
-long prevT = 0; //previous time
-float errorPrev = 0; //previous error
-
-// Define maximum and minimum integral limits
-const float MAX_INTEGRAL = 100.0; //maximum integral limit
-const float MIN_INTEGRAL = -100.0; //minimum integral limit
-
-float integral = 0; //integral term
-
+// -------------Setup-----------------
 void setup() {
   Serial.begin(9600);
   stepper1.disableOutputs(); //disable outputs initially
@@ -48,9 +39,6 @@ void setup() {
   stepper1.setCurrentPosition(0); //zero current stepper position
   stepper1.enableOutputs(); //enable outputs for motor
   stepper1.setAcceleration(3000);
-  // pinMode(2,OUTPUT);
-  // pinMode(3,OUTPUT);
-  // digitalWrite(2,HIGH);
 
   stepper2.disableOutputs(); //disable outputs initially
   stepper2.setMaxSpeed(20000);
@@ -62,41 +50,68 @@ void setup() {
   stepper3.setCurrentPosition(0); //zero current stepper position
   stepper3.enableOutputs(); //enable outputs for motor
 
+  calibrate(); 
 
-        
+  // Set up I2C
+  // Arduino joins I2C bus as slave with address 8
+  Wire.begin(0x8);
+  
+  // Call receiveEvent function when data received                
+  Wire.onReceive(getBallCoords);
 }
 
-void loop() {
-  PID();
-  // digitalWrite(3,LOW);
-  // digitalWrite(3,HIGH);
-  // delayMicroseconds(60);
+void receiveEvent(int[] howMany) {
+  LED_Byte = Wire.read(); // receive byte as an integer
+  digitalWrite(ledPin, LED_Byte); // turn on/off LED based on byte information
+  Serial.println(LED_Byte);
+  
 }
 
-float angleToStep(float angle){
-  return angle/360 * 3200;
+int angleToStep(float angle){
+  return int(trunc(angle/360 * 3200));
 }
 
-void PID() {
+void calibrate(){
+  // Platform to be pushed all the way down, angle = 152.78 from CAD
+  // Move from theta = 152.78 to theta0
+  stepper1.move(angleToStep(-62.78-theta0));
+  stepper2.move(angleToStep(-62.78-theta0));
+  stepper3.move(angleToStep(-62.78-theta0));
+  
+  // Reset Stepper Position to be at 
+  stepper1.setCurrentPosition(angleToStep(theta0));
+  stepper2.setCurrentPosition(angleToStep(theta0));
+  stepper3.setCurrentPosition(angleToStep(theta0));
+}
 
-  float target = 90.0 * 1023.0 / 270; // *4 This is the target step we wish to achieve converting from degrees to POT ticks.
-  target = constrain(target, 0, 1023); //contrains target to the min/max POT ticks
-  Serial.print("target "); //prints out the target
-  Serial.print(target); 
-  Serial.print(",");
+void getBallCoords(int[] howMany)
+{
+  // Function that executes whenever data is received from master device, the Pi 5
+  xCoords = Wire.read(); // receive byte as an integer
+  Serial.println(xCoords);
 
+  // Set the variables below
+  // x_ball_pixel
+  // y_ball_pixel
+}
+
+void inverseKinematics(float theta_X, float theta_Y)
+{
+  // Apply eqns and set global motor angles
+
+  // motorAngles.motor1 = 
+  // motorAngles.motor2 = 
+  // motorAngles.motor3 = 
+}
+
+float PID_Helper(float target_pos, float curr_xy_ball_pos) {
   // Find time difference
   long currT = micros();
   float deltaT = ((float) (currT - prevT))/( 1.0e6 ); //determine change in time
   prevT = currT; //reset current time
 
-  
-  Serial.print("potenValue "); //print out the POT value
-  Serial.print(analogRead(A0)); 
-  Serial.print(",");
-
-  // PID calculation
-  int error = target - analogRead(A0);
+  // Note: Ball Position is in pixels
+  int error = target_pos - curr_xy_ball_pos;
   integral = integral + error*deltaT;
   float derivative = (error - errorPrev)/(deltaT);
   errorPrev = error;
@@ -106,52 +121,30 @@ void PID() {
   if (integral < MIN_INTEGRAL) integral = MIN_INTEGRAL;
 
   // Control signal
-  float output = kp*error + kd*derivative + ki*integral; //PID output (In POT ticks)
-  Serial.print("output "); //prints output
-  Serial.print(output); 
-  Serial.print(",");
+  float output = kp*error + kd*derivative + ki*integral;
 
-  float stepperTarget = round(((((output * 270) / 1023) * 3200) / 360)); //converts POT ticks to steps as motor is set to 3200 steps/revolution
-  stepperTarget = (constrain(stepperTarget, -2400, 2400)); //clamps error down too maximum movable steps based on POT
-  Serial.print("stepperTarget "); //prints motor's target steps
-  Serial.println(stepperTarget);
-//  stepper.move(stepperTarget);
-
-  // Moves motors for a certain time before repeating PID calculations
-  long currT2 = millis();
-  while (1) { // *5 the period of motor movement can be adjusted
-//      stepper1.setSpeed(6400); //*6 sets motor speed
-//      stepper1.runSpeed(); //steps the motor 
-//
-//      stepper2.setSpeed(6400); //*6 sets motor speed
-//      stepper2.runSpeed(); //steps the motor 
-//      
-//      stepper3.setSpeed(6400); //*6 sets motor speed
-//      stepper3.runSpeed(); //steps the motor 
-        stepper1.moveTo(angleToStep(720+360));
-        delay(1000);
-
-        stepper1.runToPosition();
-        
- }
+  // The outputs here are the angles we need to perform inv kinematics on (theta_x, theta_y)
+  return output;
 }
 
-// Motor Driver 1
-// Pinouts (D3 (PUL+), D4 (ENA+), D2 (DIR+))
+void PID(){
+  // Perform PID Calculations
+  float target_x_pos = 960;
+  float theta_x_output = PID_Helper(target_x_pos, x_ball_pixel);
 
-// Motor Driver 2
-// Pinouts (D5 (ENA+), D6 (DIR+), D7 (PUL+))
+  float target_y_pos = 540;
+  float theta_y_output = PID_Helper(target_y_pos, y_ball_pixel);
 
-// Motor Driver 3
-// Pinouts (D8 (PUL+), D9 (DIR+), D10 (ENA+))
+  // Perform inverse kinematics eqns to find motor1, motor2, and motor3 angle vals.
+  inverseKinematics(theta_x_output, theta_y_output);
+}
 
-// move the motor based on 
+// Main function to be run in the arduino
+void loop() {
+  // Call PID helpers here and compute differences 
+  // PID();
 
-// moveMotors (3 inputs)
-// turn tetha_x tetha_y in length (2 inputs) -> (3 angles)
-// 
-
-
-void moveMotors(AccelStepper motor1, AccelStepper motor2, AccelStepper motor3){
-  
+  //stepper1.moveTo(angleToStep(720+360));
+  //delay(1000);
+  //stepper1.runToPosition();
 }
