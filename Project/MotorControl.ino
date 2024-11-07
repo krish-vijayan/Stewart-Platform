@@ -72,13 +72,17 @@ int angleToStep(float angle){
 }
 
 void calibrate(){
-  // Platform to be pushed all the way down, angle = 152.78 from CAD
-  // Move from theta = 152.78 to theta0
-  stepper1.move(angleToStep(-62.78-theta0));
-  stepper2.move(angleToStep(-62.78-theta0));
-  stepper3.move(angleToStep(-62.78-theta0));
+  // Platform to be pushed all the way down, angle = -62.78 from CAD
+  // Move from theta = -62.78 to theta0
+  stepper1.move(angleToStep(62.78+theta0));
+  stepper2.move(angleToStep(62.78+theta0));
+  stepper3.move(angleToStep(62.78+theta0));
+
+  stepper1.runToPosition();
+  stepper2.runToPosition();
+  stepper3.runToPosition();
   
-  // Reset Stepper Position to be at 
+  // reset stepper position to be at 
   stepper1.setCurrentPosition(angleToStep(theta0));
   stepper2.setCurrentPosition(angleToStep(theta0));
   stepper3.setCurrentPosition(angleToStep(theta0));
@@ -98,6 +102,16 @@ void getBallCoords(int[] howMany)
 void inverseKinematics(float theta_X, float theta_Y)
 {
   // Apply eqns and set global motor angles
+
+  float z1_change = (platform_radius*(sin(30))*(sin(theta_Y))) + (platform_radius*(sin(60))*(sin(theta_X)));
+  float z2_change = (platform_radius*(sin(30))*(sin(theta_Y))) - (platform_radius*(sin(60))*(sin(theta_X)));
+  float z3_change = -(platform_radius*(sin(theta_Y)));
+
+  float z1_final = z_initial + z1_change;
+  float z2_final = z_initial + z2_change;
+  float z3_final = z_initial + z3_change;
+
+  // float theta_m;
 
   // motorAngles.motor1 = 
   // motorAngles.motor2 = 

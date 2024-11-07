@@ -21,7 +21,6 @@ const int enPinStepper3 = 10; //enable Pin (ENA+)
 // Motor Driver 3
 // Pinouts (D8 (PUL+), D9 (DIR+), D10 (ENA+))
 
-
 // PID constants (students can edit these to adjust accuracy)
 float kp = 1; //*1
 float kd = 0.025; //*2
@@ -61,8 +60,6 @@ void setup() {
   stepper3.setMaxSpeed(20000);
   stepper3.setCurrentPosition(0); //zero current stepper position
   stepper3.enableOutputs(); //enable outputs for motor
-
-
         
 }
 
