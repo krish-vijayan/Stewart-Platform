@@ -1,39 +1,69 @@
-#include "MotorDefs.h"
-
 #include <AccelStepper.h>
+#include <MultiStepper.h>
 
-#include "pid.h"
+// ------------Motor Angle Definitions----------------------
+const int dirPinStepper1 = 8; //direction Pin (DIR+)
+const int stepPinStepper1 = 10; //pulse Pin (PUL+)
+const int enPinStepper1 = 9; //enable Pin (ENA+)
+
+const int dirPinStepper2 = 11; //direction Pin (DIR+))
+const int stepPinStepper2 = 13; //pulse Pin (PUL+)
+const int enPinStepper2 = 12; //enable Pin (ENA+)
+
+const int dirPinStepper3 = 5; //direction Pin (DIR+))
+const int stepPinStepper3 = 7; //pulse Pin (PUL+)
+const int enPinStepper3 = 6; //enable Pin (ENA+)
+
+// --------------PID Constants----------------------
+float kp = 1; //*1
+float kd = 0.025; //*2
+float ki = 0.5; //*3
+
+// Define maximum and minimum integral limits
+const float MAX_INTEGRAL = 100.0;
+const float MIN_INTEGRAL = -100.0;
+
+long prevT = 0; //previous time
+float errorPrev = 0; //previous error
+float integral = 0; //integral term
 
 // -------------- Global Definitions -----------------
-// Motor Angle Struct
-struct motorAngles motorAnglesObj;
+float motorAngles[3] = {0};
 
 // Global Ball Position
 float x_ball_pixel;
 float y_ball_pixel;
 
-// PID Related Definitions
-int output = 0; //output from PID algorithm
-long prevT = 0; //previous time
-float errorPrev = 0; //previous error
-float integral = 0; //integral term
+// --------------Platform Constants-----------------
+// Everything in mm
+int link1_length = 45;
+int link2_length = 75;
+int motor_radius = 75;
+int platform_radius = 90;
 
-// Calibration Related Consts
+float z_initial = 66.77; // from CAD
+float lower_bound_angle = -20;
+float upper_bound_angle = 110;
+
+// --------------Calibration Constants-----------------
 float theta0 = -2.9;
 
-// I2C Pins
+// --------------I2C Constants-----------------
 const int SDA_Pin = 20;
 const int SCL_Pin = 21;
 const int ledPin = 13; // *** Change LED Pin here
 int LED_Byte = 0;
 
+// --------------Stepper Instances-----------------
 AccelStepper stepper1(AccelStepper::DRIVER, stepPinStepper1, dirPinStepper1); //create instance of stepper
 AccelStepper stepper2(AccelStepper::DRIVER, stepPinStepper2, dirPinStepper2); //create instance of stepper
 AccelStepper stepper3(AccelStepper::DRIVER, stepPinStepper3, dirPinStepper3); //create instance of stepper
+MultiStepper steppers;
 
 // -------------Setup-----------------
 void setup() {
   Serial.begin(9600);
+
   stepper1.disableOutputs(); //disable outputs initially
   stepper1.setMaxSpeed(10000);
   stepper1.setCurrentPosition(0); //zero current stepper position
@@ -44,39 +74,54 @@ void setup() {
   stepper2.setMaxSpeed(20000);
   stepper2.setCurrentPosition(0); //zero current stepper position
   stepper2.enableOutputs(); //enable outputs for motor
-  stepper1.setAcceleration(3000);
+  stepper2.setAcceleration(3000);
 
   stepper3.disableOutputs(); //disable outputs initially
   stepper3.setMaxSpeed(20000);
   stepper3.setCurrentPosition(0); //zero current stepper position
   stepper3.enableOutputs(); //enable outputs for motor
-  stepper1.setAcceleration(3000);
+  stepper3.setAcceleration(3000);
 
   calibrate(); 
 
   // Set up I2C
   // Arduino joins I2C bus as slave with address 8
-  Wire.begin(0x8);
+  //  Wire.begin(0x8);
   
   // Call receiveEvent function when data received                
-  Wire.onReceive(getBallCoords);
+  //  Wire.onReceive(getBallCoords);
 }
 
-// Main function to be run in the arduino
+//void receiveEvent(int[] howMany) {
+//  LED_Byte = Wire.read(); // receive byte as an integer
+//  digitalWrite(ledPin, LED_Byte); // turn on/off LED based on byte information
+//  Serial.println(LED_Byte);
+//  
+//}
+
+//void getBallCoords(int[] howMany)
+//{
+//  // Function that executes whenever data is received from master device, the Pi 5
+//  xCoords = Wire.read(); // receive byte as an integer
+//  Serial.println(xCoords);
+//
+//  // Set the variables below
+//  // x_ball_pixel
+//  // y_ball_pixel
+//}
+
 void loop() {
   // Call PID helpers here and compute differences 
   // PID();
 
-  //stepper1.moveTo(angleToStep(720+360));
-  //delay(1000);
+  //stepper1.move(angleToStep(motorAngles[0]));
   //stepper1.runToPosition();
-}
 
-void receiveEvent(int[] howMany) {
-  LED_Byte = Wire.read(); // receive byte as an integer
-  digitalWrite(ledPin, LED_Byte); // turn on/off LED based on byte information
-  Serial.println(LED_Byte);
-  
+  //stepper1.move(angleToStep(motorAngles[1]));
+  //stepper1.runToPosition();
+
+  //stepper3.move(angleToStep(motorAngles[2]));
+  //stepper3.runToPosition();
 }
 
 int angleToStep(float angle){
@@ -100,17 +145,6 @@ void calibrate(){
   stepper3.setCurrentPosition(angleToStep(theta0));
 }
 
-void getBallCoords(int[] howMany)
-{
-  // Function that executes whenever data is received from master device, the Pi 5
-  xCoords = Wire.read(); // receive byte as an integer
-  Serial.println(xCoords);
-
-  // Set the variables below
-  // x_ball_pixel
-  // y_ball_pixel
-}
-
 void inverseKinematics(float theta_X, float theta_Y)
 {
   // Apply eqns and set global motor angles
@@ -130,15 +164,17 @@ void inverseKinematics(float theta_X, float theta_Y)
 
   // Motor 1
   float num1 = (((pow(link1_length, 2) + pow(n1, 2) - pow(link2_length, 2)))/(2*n1*link1_length));
-  motorAngles.motor1 = asin((num1)) - atan(k/z1_final);
+  motorAngles[0] = asin((num1)) - atan(k/z1_final);
 
   // Motor 2
   float num2 = (((pow(link1_length, 2) + pow(n2, 2) - pow(link2_length, 2)))/(2*n2*link1_length));
-  motorAngles.motor2 = asin((num2)) - atan(k/z2_final);
+  motorAngles[1] = asin((num2)) - atan(k/z2_final);
 
   // Motor 3
   float num3 = (((pow(link1_length, 2) + pow(n3, 2) - pow(link2_length, 2)))/(2*n3*link1_length));
-  motorAngles.motor3 = asin((num3)) - atan(k/z3_final);
+  motorAngles[2] = asin((num3)) - atan(k/z3_final);
+
+  // Check if motor angle is within bounds
 }
 
 float PID_Helper(float target_pos, float curr_xy_ball_pos) {
