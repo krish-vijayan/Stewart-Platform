@@ -42,8 +42,8 @@ int motor_radius = 75;
 int platform_radius = 90;
 
 float z_initial = 66.77; // from CAD
-float lower_bound_angle = -20;
-float upper_bound_angle = 110;
+int MAX_MOTOR = 40;// 43.9 in CAD
+int MIN_MOTOR = -20; //-25.7 in CAD
 
 // --------------Calibration Constants-----------------
 float theta0 = -2.9;
@@ -111,17 +111,17 @@ void setup() {
 //}
 
 void loop() {
-  // Call PID helpers here and compute differences 
-  // PID();
 
-  //stepper1.move(angleToStep(motorAngles[0]));
-  //stepper1.runToPosition();
+  //PID to center of board
+  PID(960,540);
 
-  //stepper1.move(angleToStep(motorAngles[1]));
-  //stepper1.runToPosition();
-
-  //stepper3.move(angleToStep(motorAngles[2]));
-  //stepper3.runToPosition();
+  stepper1.moveTo(angleToStep(motorAngles[0]));
+  stepper1.moveTo(angleToStep(motorAngles[1]));
+  stepper1.moveTo(angleToStep(motorAngles[2]));
+  
+  stepper1.run();
+  stepper2.run();
+  stepper3.run();
 }
 
 int angleToStep(float angle){
@@ -174,10 +174,14 @@ void inverseKinematics(float theta_X, float theta_Y)
   float num3 = (((pow(link1_length, 2) + pow(n3, 2) - pow(link2_length, 2)))/(2*n3*link1_length));
   motorAngles[2] = asin((num3)) - atan(k/z3_final);
 
-  // Check if motor angle is within bounds
+  // saturate motor angles between bounds
+  for (int i=0; i<=2, i++){
+    if (motorAngles[i]>MAX_MOTOR) motorAngles[i] = MAX_MOTOR;
+    if (motorAngles[i]<MIN_MOTOR) motorAngles[i] = MIN_MOTOR;
+  }
 }
 
-float PID_Helper(float target_pos, float curr_xy_ball_pos) {
+float PID_Helper(float target_pos, float curr_pos) {
   // Find time difference
   long currT = micros();
   float deltaT = ((float) (currT - prevT))/( 1.0e6 ); //determine change in time
@@ -200,13 +204,12 @@ float PID_Helper(float target_pos, float curr_xy_ball_pos) {
   return output;
 }
 
-void PID(){
+void PID(int target_x, int target_y){
   // Perform PID Calculations
-  float target_x_pos = 960; // middle of platform (x-axis)
-  float theta_x_output = PID_Helper(target_x_pos, x_ball_pixel);
+  
+  float theta_x_output = PID_Helper(target_x, x_ball_pixel);
 
-  float target_y_pos = 540; // middle of platform (y-axis)
-  float theta_y_output = PID_Helper(target_y_pos, y_ball_pixel);
+  float theta_y_output = PID_Helper(target_y, y_ball_pixel);
 
   // Perform inverse kinematics eqns to find motor1, motor2, and motor3 angle vals.
   inverseKinematics(theta_x_output, theta_y_output);
