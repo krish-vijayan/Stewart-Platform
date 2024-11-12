@@ -1,5 +1,6 @@
 #include <AccelStepper.h>
 #include <MultiStepper.h>
+#include <Wire.h>
 
 // ------------Motor Angle Definitions----------------------
 const int dirPinStepper1 = 8; //direction Pin (DIR+)
@@ -53,6 +54,10 @@ const int SDA_Pin = 20;
 const int SCL_Pin = 21;
 const int ledPin = 13; // *** Change LED Pin here
 int LED_Byte = 0;
+int x = 0;
+int y = 0;
+int byteCounter = 0;  // Track which byte we're reading
+int x_high = 0, x_low = 0, y_high = 0, y_low = 0;
 
 // --------------Stepper Instances-----------------
 AccelStepper stepper1(AccelStepper::DRIVER, stepPinStepper1, dirPinStepper1); //create instance of stepper
@@ -83,32 +88,45 @@ void setup() {
   stepper3.setAcceleration(3000);
 
   calibrate(); 
+  //Set up I2C connection 
 
-  // Set up I2C
-  // Arduino joins I2C bus as slave with address 8
-  //  Wire.begin(0x8);
-  
-  // Call receiveEvent function when data received                
-  //  Wire.onReceive(getBallCoords);
+  Wire.begin(0x8);
+  Wire.onReceive(receiveEvent);
+  pinMode(SDA_Pin, INPUT);
+  pinMode(SCL_Pin, INPUT);
 }
 
-//void receiveEvent(int[] howMany) {
-//  LED_Byte = Wire.read(); // receive byte as an integer
-//  digitalWrite(ledPin, LED_Byte); // turn on/off LED based on byte information
-//  Serial.println(LED_Byte);
-//  
-//}
+void receiveEvent(int bytes) {
+    while (Wire.available()) {
+        if (byteCounter == 0) {
+            x_high = Wire.read();  // First byte is the high byte of x
+        } else if (byteCounter == 1) {
+            x_low = Wire.read();   // Second byte is the low byte of x
+            x = (x_high << 8) | x_low;  // Combine high and low bytes into x
+        } else if (byteCounter == 2) {
+            y_high = Wire.read();  // Third byte is the high byte of y
+        } else if (byteCounter == 3) {
+            y_low = Wire.read();   // Fourth byte is the low byte of y
+            y = (y_high << 8) | y_low;  // Combine high and low bytes into y
 
-//void getBallCoords(int[] howMany)
-//{
-//  // Function that executes whenever data is received from master device, the Pi 5
-//  xCoords = Wire.read(); // receive byte as an integer
-//  Serial.println(xCoords);
-//
-//  // Set the variables below
-//  // x_ball_pixel
-//  // y_ball_pixel
-//}
+            // Debugging output to verify the received values
+            Serial.print("Received X: ");
+            Serial.print(x);
+            Serial.print(", Y: ");
+            Serial.println(y);
+
+            //set global state coords
+            x_ball_pixel = x;
+            y_ball_pixel = y;
+
+            // Reset the counter after receiving all 4 bytes
+            byteCounter = -1;
+        }
+        byteCounter++;
+    }
+}
+
+
 
 void loop() {
   // Call PID helpers here and compute differences 
