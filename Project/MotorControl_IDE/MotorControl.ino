@@ -14,14 +14,16 @@ const int dirPinStepper3 = 5; //direction Pin (DIR+))
 const int stepPinStepper3 = 7; //pulse Pin (PUL+)
 const int enPinStepper3 = 6; //enable Pin (ENA+)
 
+const int buttonpin = 4;
+
 // --------------PID Constants----------------------
-float kp = 1; //*1
-float kd = 0.025; //*2
-float ki = 0.5; //*3
+float kp = 0.009; //*1
+float kd = 0.005; //*2
+float ki = 0.002; //*3
 
 // Define maximum and minimum integral limits
-const float MAX_INTEGRAL = 100.0;
-const float MIN_INTEGRAL = -100.0;
+const float MAX_INTEGRAL = 10.0;
+const float MIN_INTEGRAL = -10.0;
 
 long prevT = 0; //previous time
 float errorPrev = 0; //previous error
@@ -43,8 +45,8 @@ int link2_length = 75;
 int motor_radius = 75;
 int platform_radius = 90;
 
-int MAX_HEIGHT = 115;//  ~119 in CAD
-int MIN_HEIGHT = 52; //49.98
+int MAX_HEIGHT = 100;//  ~119 in CAD
+int MIN_HEIGHT = 60; //49.98
 
 // --------------Calibration Constants-----------------
 float theta_0 = 15;
@@ -66,6 +68,8 @@ MultiStepper steppers;
 void setup() {
   Serial.begin(9600);
 
+  pinMode(buttonpin, INPUT_PULLUP);
+
   stepper1.disableOutputs(); //disable outputs initially
   stepper1.setMaxSpeed(10000);
   stepper1.setCurrentPosition(0); //zero current stepper position
@@ -84,26 +88,40 @@ void setup() {
   stepper3.enableOutputs(); //enable outputs for motor
   stepper3.setAcceleration(3000);
 
+  while (digitalRead(buttonpin)==LOW){
+
+  }
+
   calibrate(); 
 
   delay(500);
-  LIN_inverseKinematics(45,45);
+  //LIN_inverseKinematics(45,45);
   
 }
 
 void loop() {
-
-
   //PID to center of board
-  //PID(960,540);
+  x_ball_pixel = random(100.0, 200.0);
+  y_ball_pixel = random(100.0, 200.0);
+
+  Serial.print("x position ");
+  Serial.println(x_ball_pixel);
+
+  Serial.print("y position ");
+  Serial.println(y_ball_pixel);
+
+  PID(150, 150);
   
   stepper1.moveTo(angleToStep(motorAngles[0]));
   stepper2.moveTo(angleToStep(motorAngles[1]));
   stepper3.moveTo(angleToStep(motorAngles[2]));
 
-  stepper1.run();
-  stepper2.run();
-  stepper3.run();
+  while ((stepper1.distanceToGo() != 0) || (stepper2.distanceToGo() != 0) || (stepper3.distanceToGo() != 0))
+  {
+    stepper1.run();
+    stepper2.run();
+    stepper3.run();
+  }
 }
 
 int angleToStep(float angle){
@@ -127,7 +145,7 @@ void calibrate(){
   stepper3.setCurrentPosition(angleToStep(theta_0));
 }
 
-void inverseKinematics(float theta_Y, float theta_X)
+void inverseKinematics(float theta_X, float theta_Y)
 {
   theta_X *= 3.1416/180;
   theta_Y *= 3.1416/180;
@@ -137,9 +155,9 @@ void inverseKinematics(float theta_Y, float theta_X)
   //Serial.println(theta_Y);
 
   // Apply eqns and set global motor angles
-  float z1_change = (platform_radius/2*(sin(theta_Y))) + (platform_radius*sqrt(3)/2*sin(theta_X));
-  float z2_change = (platform_radius/2*(sin(theta_Y))) - (platform_radius*sqrt(3)/2*sin(theta_X));
-  float z3_change = -(platform_radius*(sin(theta_Y)));
+  float z1_change = (platform_radius/2*(sin(theta_X))) + (platform_radius*sqrt(3)/2*sin(theta_Y));
+  float z2_change = (platform_radius/2*(sin(theta_X))) - (platform_radius*sqrt(3)/2*sin(theta_Y));
+  float z3_change = -(platform_radius*(sin(theta_X)));
   
   //Serial.println("z1_change---");
   //Serial.println(z1_change);
@@ -154,8 +172,8 @@ void inverseKinematics(float theta_Y, float theta_X)
 
   //clamp z height to avoid weird angles for theta
   for(int i=0;i<=2;i++){
-    if (Z[i]>MAX_HEIGHT) Z[i] = MAX_HEIGHT;
-    if (Z[i]<MIN_HEIGHT) Z[i] = MIN_HEIGHT;
+    if (Z[i]>=MAX_HEIGHT) Z[i] = MAX_HEIGHT;
+    if (Z[i]<=MIN_HEIGHT) Z[i] = MIN_HEIGHT;
   }
 
   //Serial.println("fin---");
@@ -187,11 +205,11 @@ void inverseKinematics(float theta_Y, float theta_X)
   // Motor 3
   num[2] = (((pow(link1_length, 2) + pow(n3, 2) - pow(link2_length, 2)))/(2*n3*link1_length));
 
-  Serial.println("final angles---");
+  Serial.println("final heights---");
   for(int i=0; i<=2; i++)
   {
     motorAngles[i] = (asin((num[i])) - atan(k/Z[i]))*180/3.1416;
-    Serial.println(motorAngles[i]);   
+    Serial.println(Z[i]);   
   }
 
   /*
@@ -219,9 +237,9 @@ void LIN_inverseKinematics(float theta_X, float theta_Y)
   theta_Y *= 3.1416/180;
 
   // Apply eqns and set global motor angles
-  float z1_change = (platform_radius/2*(theta_Y)) + (platform_radius*sqrt(3)/2*theta_X);
-  float z2_change = (platform_radius/2*(theta_Y)) - (platform_radius*sqrt(3)/2*theta_X);
-  float z3_change = -(platform_radius*(theta_Y));
+  float z1_change = (platform_radius/2*(theta_X)) + (platform_radius*sqrt(3)/2*theta_Y);
+  float z2_change = (platform_radius/2*(theta_X)) - (platform_radius*sqrt(3)/2*theta_Y);
+  float z3_change = -(platform_radius*(theta_X));
 
   Z[0] = z_0 + z1_change;
   Z[1] = z_0 + z2_change;
