@@ -28,7 +28,9 @@ float errorPrev = 0; //previous error
 float integral = 0; //integral term
 
 // -------------- Global Definitions -----------------
-float motorAngles[3] = {0};
+float motorAngles[3] = {0,0,0};
+float Z[3] = {0,0,0};
+float num[3] = {0,0,0};
 
 // Global Ball Position
 float x_ball_pixel;
@@ -41,12 +43,12 @@ int link2_length = 75;
 int motor_radius = 75;
 int platform_radius = 90;
 
-float z_initial = 66.77; // from CAD
-int MAX_MOTOR = 40;// 43.9 in CAD
-int MIN_MOTOR = -20; //-25.7 in CAD
+int MAX_HEIGHT = 115;//  ~119 in CAD
+int MIN_HEIGHT = 52; //49.98
 
 // --------------Calibration Constants-----------------
-float theta0 = -2.9;
+float theta_0 = 15;
+float z_0 = 81.04; // from CAD
 
 // --------------I2C Constants-----------------
 const int SDA_Pin = 20;
@@ -84,41 +86,21 @@ void setup() {
 
   calibrate(); 
 
-  // Set up I2C
-  // Arduino joins I2C bus as slave with address 8
-  //  Wire.begin(0x8);
+  delay(500);
+  LIN_inverseKinematics(45,45);
   
-  // Call receiveEvent function when data received                
-  //  Wire.onReceive(getBallCoords);
 }
-
-//void receiveEvent(int[] howMany) {
-//  LED_Byte = Wire.read(); // receive byte as an integer
-//  digitalWrite(ledPin, LED_Byte); // turn on/off LED based on byte information
-//  Serial.println(LED_Byte);
-//  
-//}
-
-//void getBallCoords(int[] howMany)
-//{
-//  // Function that executes whenever data is received from master device, the Pi 5
-//  xCoords = Wire.read(); // receive byte as an integer
-//  Serial.println(xCoords);
-//
-//  // Set the variables below
-//  // x_ball_pixel
-//  // y_ball_pixel
-//}
 
 void loop() {
 
-  //PID to center of board
-  PID(960,540);
 
-  stepper1.moveTo(angleToStep(motorAngles[0]));
-  stepper1.moveTo(angleToStep(motorAngles[1]));
-  stepper1.moveTo(angleToStep(motorAngles[2]));
+  //PID to center of board
+  //PID(960,540);
   
+  stepper1.moveTo(angleToStep(motorAngles[0]));
+  stepper2.moveTo(angleToStep(motorAngles[1]));
+  stepper3.moveTo(angleToStep(motorAngles[2]));
+
   stepper1.run();
   stepper2.run();
   stepper3.run();
@@ -129,56 +111,135 @@ int angleToStep(float angle){
 }
 
 void calibrate(){
-  // Platform to be pushed all the way down, angle = -62.78 from CAD
-  // Move from theta = -62.78 to theta0
-  stepper1.move(angleToStep(62.78+theta0));
-  stepper2.move(angleToStep(62.78+theta0));
-  stepper3.move(angleToStep(62.78+theta0));
+  // Platform to be pushed all the way down, initial angle=-27.46 from CAD
+  // Move from theta = -27.46 to theta_0
+  stepper1.move(angleToStep(27.46+theta_0));
+  stepper2.move(angleToStep(27.46+theta_0));
+  stepper3.move(angleToStep(27.46+theta_0));
 
   stepper1.runToPosition();
   stepper2.runToPosition();
   stepper3.runToPosition();
   
-  // reset stepper position to be at 
-  stepper1.setCurrentPosition(angleToStep(theta0));
-  stepper2.setCurrentPosition(angleToStep(theta0));
-  stepper3.setCurrentPosition(angleToStep(theta0));
+  // reset stepper position to be 15 degrees at neutral position
+  stepper1.setCurrentPosition(angleToStep(theta_0));
+  stepper2.setCurrentPosition(angleToStep(theta_0));
+  stepper3.setCurrentPosition(angleToStep(theta_0));
 }
 
-void inverseKinematics(float theta_X, float theta_Y)
+void inverseKinematics(float theta_Y, float theta_X)
 {
-  // Apply eqns and set global motor angles
-  float z1_change = (platform_radius*(sin(30))*(sin(theta_Y))) + (platform_radius*(sin(60))*(sin(theta_X)));
-  float z2_change = (platform_radius*(sin(30))*(sin(theta_Y))) - (platform_radius*(sin(60))*(sin(theta_X)));
-  float z3_change = -(platform_radius*(sin(theta_Y)));
+  theta_X *= 3.1416/180;
+  theta_Y *= 3.1416/180;
+  //Serial.println("x---");
+  //Serial.println(theta_X);
+  //Serial.println("y---");
+  //Serial.println(theta_Y);
 
-  float z1_final = z_initial + z1_change;
-  float z2_final = z_initial + z2_change;
-  float z3_final = z_initial + z3_change;
+  // Apply eqns and set global motor angles
+  float z1_change = (platform_radius/2*(sin(theta_Y))) + (platform_radius*sqrt(3)/2*sin(theta_X));
+  float z2_change = (platform_radius/2*(sin(theta_Y))) - (platform_radius*sqrt(3)/2*sin(theta_X));
+  float z3_change = -(platform_radius*(sin(theta_Y)));
+  
+  //Serial.println("z1_change---");
+  //Serial.println(z1_change);
+  //  Serial.println("z2_change---");
+  //Serial.println(z2_change);
+  //  Serial.println("z3_change---");
+  //Serial.println(z3_change);
+
+  Z[0] = z_0 + z1_change;
+  Z[1] = z_0 + z2_change;
+  Z[2] = z_0 + z3_change;
+
+  //clamp z height to avoid weird angles for theta
+  for(int i=0;i<=2;i++){
+    if (Z[i]>MAX_HEIGHT) Z[i] = MAX_HEIGHT;
+    if (Z[i]<MIN_HEIGHT) Z[i] = MIN_HEIGHT;
+  }
+
+  //Serial.println("fin---");
+  //Serial.println(Z[2]);
 
   float k = platform_radius - motor_radius;
+  //Serial.println("k---");
+  //Serial.println(k);
 
-  float n1 = sqrt(pow(z1_final, 2) + pow(k, 2));
-  float n2 = sqrt(pow(z2_final, 2) + pow(k, 2));
-  float n3 = sqrt(pow(z3_final, 2) + pow(k, 2));
+  float n1 = sqrt(pow(Z[0], 2) + pow(k, 2));
+  float n2 = sqrt(pow(Z[1], 2) + pow(k, 2));
+  float n3 = sqrt(pow(Z[2], 2) + pow(k, 2));
+  
+  //Serial.println("n3---");
+  //Serial.println(n3);
 
   // Motor 1
-  float num1 = (((pow(link1_length, 2) + pow(n1, 2) - pow(link2_length, 2)))/(2*n1*link1_length));
-  motorAngles[0] = asin((num1)) - atan(k/z1_final);
+  num[0] = (((pow(link1_length, 2) + pow(n1, 2) - pow(link2_length, 2)))/(2*n1*link1_length));
+  //Serial.println("angle1---");
+  //Serial.println(num1);
+  //Serial.println(atan(k/z1_final));
 
   // Motor 2
-  float num2 = (((pow(link1_length, 2) + pow(n2, 2) - pow(link2_length, 2)))/(2*n2*link1_length));
-  motorAngles[1] = asin((num2)) - atan(k/z2_final);
+  num[1] = (((pow(link1_length, 2) + pow(n2, 2) - pow(link2_length, 2)))/(2*n2*link1_length));
+  //Serial.println("angle2---");
+  //Serial.println(num2);
+  //Serial.println(atan(k/z2_final));
 
   // Motor 3
-  float num3 = (((pow(link1_length, 2) + pow(n3, 2) - pow(link2_length, 2)))/(2*n3*link1_length));
-  motorAngles[2] = asin((num3)) - atan(k/z3_final);
+  num[2] = (((pow(link1_length, 2) + pow(n3, 2) - pow(link2_length, 2)))/(2*n3*link1_length));
 
-  // saturate motor angles between bounds
-  for (int i=0; i<=2, i++){
-    if (motorAngles[i]>MAX_MOTOR) motorAngles[i] = MAX_MOTOR;
-    if (motorAngles[i]<MIN_MOTOR) motorAngles[i] = MIN_MOTOR;
+  Serial.println("final angles---");
+  for(int i=0; i<=2; i++)
+  {
+    motorAngles[i] = (asin((num[i])) - atan(k/Z[i]))*180/3.1416;
+    Serial.println(motorAngles[i]);   
   }
+
+  /*
+  Serial.println("denominator_num3---");
+  Serial.println(2*n3*link1_length);
+
+  Serial.println("numerator_num3---");
+  Serial.println((pow(link1_length, 2) + pow(n3, 2) - pow(link2_length, 2)));
+
+  Serial.println("num3---");
+  Serial.println((num3));
+  Serial.println("asin---");
+  Serial.println(asin(num3));
+  Serial.println("k/z3---");
+  Serial.println((k/Z[2]));
+  Serial.println("atank/z3---");
+  Serial.println(atan(k/Z[2]));
+  */
+  
+}
+
+void LIN_inverseKinematics(float theta_X, float theta_Y)
+{
+  theta_X *= 3.1416/180;
+  theta_Y *= 3.1416/180;
+
+  // Apply eqns and set global motor angles
+  float z1_change = (platform_radius/2*(theta_Y)) + (platform_radius*sqrt(3)/2*theta_X);
+  float z2_change = (platform_radius/2*(theta_Y)) - (platform_radius*sqrt(3)/2*theta_X);
+  float z3_change = -(platform_radius*(theta_Y));
+
+  Z[0] = z_0 + z1_change;
+  Z[1] = z_0 + z2_change;
+  Z[2] = z_0 + z3_change;
+
+  //clamp z height to avoid weird angles for theta
+  for(int i=0;i<=2;i++){
+    if (Z[i]>MAX_HEIGHT) Z[i] = MAX_HEIGHT;
+    if (Z[i]<MIN_HEIGHT) Z[i] = MIN_HEIGHT;
+  }
+
+  Serial.println("final angles---");
+
+  for (int i=0; i<=2; i++){
+    motorAngles[i] = -81.2425565391 + 1.18759328456*Z[i];
+    Serial.println(motorAngles[i]);
+  }
+  
 }
 
 float PID_Helper(float target_pos, float curr_pos) {
@@ -188,7 +249,7 @@ float PID_Helper(float target_pos, float curr_pos) {
   prevT = currT; //reset current time
 
   // Note: Ball Position is in pixels
-  int error = target_pos - curr_xy_ball_pos;
+  int error = target_pos - curr_pos;
   integral = integral + error*deltaT;
   float derivative = (error - errorPrev)/(deltaT);
   errorPrev = error;
