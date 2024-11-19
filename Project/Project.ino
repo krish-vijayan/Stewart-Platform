@@ -3,13 +3,13 @@
 #include <Wire.h>
 
 // ------------Motor Angle Definitions----------------------
-const int dirPinStepper1 = 8; //direction Pin (DIR+)
-const int stepPinStepper1 = 10; //pulse Pin (PUL+)
-const int enPinStepper1 = 9; //enable Pin (ENA+)
+const int dirPinStepper1 = 11; //direction Pin (DIR+)
+const int stepPinStepper1 = 13; //pulse Pin (PUL+)
+const int enPinStepper1 = 12; //enable Pin (ENA+)
 
-const int dirPinStepper2 = 11; //direction Pin (DIR+))
-const int stepPinStepper2 = 13; //pulse Pin (PUL+)
-const int enPinStepper2 = 12; //enable Pin (ENA+)
+const int dirPinStepper2 = 8; //direction Pin (DIR+))
+const int stepPinStepper2 = 10; //pulse Pin (PUL+)
+const int enPinStepper2 = 9; //enable Pin (ENA+)
 
 const int dirPinStepper3 = 5; //direction Pin (DIR+))
 const int stepPinStepper3 = 7; //pulse Pin (PUL+)
@@ -18,9 +18,9 @@ const int enPinStepper3 = 6; //enable Pin (ENA+)
 const int buttonpin = 4;
 
 // --------------PID Constants----------------------
-float kp = 0;//0.068; //*1
-float kd = 0; //*2
-float ki = 1.0; //*3
+float kp = 0.01959;//0.068; //*1 // MUCH HIGHER
+float kd = 0.00004;//06; //*2
+float ki = 0.0001; //*3
 
 // Define maximum and minimum integral limits
 const float MAX_INTEGRAL = 100.0;
@@ -36,8 +36,8 @@ float Z[3] = {0,0,0};
 float num[3] = {0,0,0};
 
 // Global Ball Position
-float x_ball_pixel;
-float y_ball_pixel;
+float x_ball_pixel = 127;
+float y_ball_pixel = 135;
 
 // --------------Platform Constants-----------------
 // Everything in mm
@@ -84,22 +84,22 @@ void setup() {
   pinMode(buttonpin, INPUT_PULLUP);
 
   stepper1.disableOutputs(); //disable outputs initially
-  stepper1.setMaxSpeed(10000);
+  stepper1.setMaxSpeed(15000);
   stepper1.setCurrentPosition(0); //zero current stepper position
   stepper1.enableOutputs(); //enable outputs for motor
-  stepper1.setAcceleration(15000);
+  stepper1.setAcceleration(7000);
 
   stepper2.disableOutputs(); //disable outputs initially
-  stepper2.setMaxSpeed(20000);
+  stepper2.setMaxSpeed(15000);
   stepper2.setCurrentPosition(0); //zero current stepper position
   stepper2.enableOutputs(); //enable outputs for motor
-  stepper2.setAcceleration(15000);
+  stepper2.setAcceleration(7000);
 
   stepper3.disableOutputs(); //disable outputs initially
-  stepper3.setMaxSpeed(20000);
+  stepper3.setMaxSpeed(15000);
   stepper3.setCurrentPosition(0); //zero current stepper position
   stepper3.enableOutputs(); //enable outputs for motor
-  stepper3.setAcceleration(15000);
+  stepper3.setAcceleration(7000);
 
   while (digitalRead(buttonpin)==LOW){
 
@@ -123,7 +123,7 @@ void loop() {
   // Serial.print("y position ");
   // Serial.println(y_ball_pixel);
 
-  PID(124, 134);
+  PID(127, 135);
   
   stepper1.moveTo(angleToStep(motorAngles[0]));
   stepper2.moveTo(angleToStep(motorAngles[1]));
@@ -247,12 +247,12 @@ void inverseKinematics(float theta_X, float theta_Y)
 void LIN_inverseKinematics(float theta_X, float theta_Y)
 {
   theta_X *= -3.1416/180;
-  theta_Y *= -3.1416/180;
+  theta_Y *= 3.1416/180;
 
   // Apply eqns and set global motor angles
   float z1_change = (platform_radius/2*(theta_X)) + (platform_radius*sqrt(3)/2*theta_Y);
-  float z2_change = (platform_radius/2*(theta_X)) - (platform_radius*sqrt(3)/2*theta_Y);
-  float z3_change = -(platform_radius*(theta_X));
+  float z2_change = -(platform_radius/2*(theta_X)) - (platform_radius*sqrt(3)/2*theta_Y);
+  float z3_change = (platform_radius*(theta_X));
 
   Z[0] = z_0 + z1_change;
   Z[1] = z_0 + z2_change;
