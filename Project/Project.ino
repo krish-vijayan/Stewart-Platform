@@ -3,13 +3,13 @@
 #include <Wire.h>
 
 // ------------Motor Angle Definitions----------------------
-const int dirPinStepper1 = 11; //direction Pin (DIR+)
-const int stepPinStepper1 = 13; //pulse Pin (PUL+)
-const int enPinStepper1 = 12; //enable Pin (ENA+)
+const int dirPinStepper2 = 11; //direction Pin (DIR+)
+const int stepPinStepper2 = 13; //pulse Pin (PUL+)
+const int enPinStepper2 = 12; //enable Pin (ENA+)
 
-const int dirPinStepper2 = 8; //direction Pin (DIR+))
-const int stepPinStepper2 = 10; //pulse Pin (PUL+)
-const int enPinStepper2 = 9; //enable Pin (ENA+)
+const int dirPinStepper1 = 8; //direction Pin (DIR+))
+const int stepPinStepper1 = 10; //pulse Pin (PUL+)
+const int enPinStepper1 = 9; //enable Pin (ENA+)
 
 const int dirPinStepper3 = 5; //direction Pin (DIR+))
 const int stepPinStepper3 = 7; //pulse Pin (PUL+)
@@ -18,9 +18,12 @@ const int enPinStepper3 = 6; //enable Pin (ENA+)
 const int buttonpin = 4;
 
 // --------------PID Constants----------------------
-float kp = 0.01959;//0.068; //*1 // MUCH HIGHER
-float kd = 0.00004;//06; //*2
+float kp = 0.017;//0.068; //*1 // MUCH HIGHER
+float kd = 0.000009;//06; //*2
 float ki = 0.0001; //*3
+// float kp = 0.5;//0.068; //*1 // MUCH HIGHER
+// float kd = 0;//06; //*2
+// float ki = 0; //*3
 
 // Define maximum and minimum integral limits
 const float MAX_INTEGRAL = 100.0;
@@ -46,7 +49,7 @@ int link2_length = 75;
 int motor_radius = 75;
 int platform_radius = 90;
 
-int MAX_HEIGHT = 100;//  ~119 in CAD
+int MAX_HEIGHT = 110;//  ~119 in CAD
 int MIN_HEIGHT = 60; //49.98
 
 // --------------Calibration Constants-----------------
@@ -109,7 +112,6 @@ void setup() {
 
   delay(500);
   //LIN_inverseKinematics(45,45);
-  
 }
 
 void loop() {
@@ -123,7 +125,15 @@ void loop() {
   // Serial.print("y position ");
   // Serial.println(y_ball_pixel);
 
-  PID(127, 135);
+  if (Z[0] == MAX_HEIGHT || Z[1] == MAX_HEIGHT || Z[2] == MAX_HEIGHT){
+    Serial.print("HEIGHTS: ");
+    Serial.println(Z[0]);
+    Serial.println(Z[1]);
+    Serial.println(Z[2]);
+  }
+  
+
+  PID(300, 255);
   
   stepper1.moveTo(angleToStep(motorAngles[0]));
   stepper2.moveTo(angleToStep(motorAngles[1]));
@@ -135,6 +145,7 @@ void loop() {
     stepper2.run();
     stepper3.run();
   }
+  
 }
 
 int angleToStep(float angle){
@@ -244,15 +255,24 @@ void inverseKinematics(float theta_X, float theta_Y)
   
 }
 
-void LIN_inverseKinematics(float theta_X, float theta_Y)
+void LIN_inverseKinematics(float theta_Y, float theta_X)
 {
-  theta_X *= -3.1416/180;
-  theta_Y *= 3.1416/180;
+  theta_X *= (3.1416/180);
+  theta_Y *= -3.1416/180;
 
   // Apply eqns and set global motor angles
-  float z1_change = (platform_radius/2*(theta_X)) + (platform_radius*sqrt(3)/2*theta_Y);
-  float z2_change = -(platform_radius/2*(theta_X)) - (platform_radius*sqrt(3)/2*theta_Y);
-  float z3_change = (platform_radius*(theta_X));
+  // float z1_change = (platform_radius/2*(theta_X)) + (platform_radius*sqrt(3)/2*theta_Y);
+    //  float z1_change = ((platform_radius*sqrt(3)/2*theta_Y));
+    float z1_change = (platform_radius*sqrt(3)/2*theta_X) + (platform_radius/2*theta_Y);
+
+
+  //  float z2_change = -(platform_radius*(theta_X));
+    float z2_change = -((platform_radius*theta_Y));
+
+//platform_radius/2*(theta_X)- 
+  //  float z3_change = ((platform_radius*sqrt(3)/2*theta_Y));
+    float z3_change = (-platform_radius*sqrt(3)/2*theta_X) +(platform_radius/2*theta_Y);
+
 
   Z[0] = z_0 + z1_change;
   Z[1] = z_0 + z2_change;
@@ -286,11 +306,11 @@ float PID_Helper(float target_pos, float curr_pos) {
   errorPrev = error;
 
 
-  Serial.print(error);
-  Serial.print(" ");
-  Serial.print(derivative);
-  Serial.print(" ");
-  Serial.println(integral);
+  // Serial.print(error);
+  // Serial.print(" ");
+  // Serial.print(derivative);
+  // Serial.print(" ");
+  // Serial.println(integral);
  
   // Clamp the integral term
   // if (integral > MAX_INTEGRAL) integral = MAX_INTEGRAL;
