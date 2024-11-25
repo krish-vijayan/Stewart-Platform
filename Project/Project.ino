@@ -19,7 +19,8 @@ const int buttonpin = 4;
 
 // --------------PID Constants----------------------
 float kp = 0.020;//0.005; //*1 // MUCH HIGHER
-float kd = 0.0004;//06; //*2 0005
+float kd = 0.00045;//06; //*2 0005
+// float ki = 0.006; //*3
 float ki = 0.006; //*3
 
 //curr best
@@ -80,6 +81,8 @@ int LED_Byte = 0;
 int byteCounter = 0;  // Track which byte we're reading
 int x_high = 0, x_low = 0, y_high = 0, y_low = 0;
 
+// -------------Kd Scaling------------------
+const int SCALE = 1.25;
 
 // --------------Stepper Instances-----------------
 AccelStepper stepper1(AccelStepper::DRIVER, stepPinStepper1, dirPinStepper1); //create instance of stepper
@@ -330,7 +333,7 @@ float PID_Helper_y(float target_pos_y, float curr_pos_y) {
 
   // Serial.print(error);
   // Serial.print(" ");
-  // Serial.print(derivative);
+  // Serial.print(derivative_y);
   // Serial.print(" ");
   // Serial.println(integral);
  
@@ -338,9 +341,15 @@ float PID_Helper_y(float target_pos_y, float curr_pos_y) {
   if (integral_y > MAX_INTEGRAL) integral_y = MAX_INTEGRAL;
   if (integral_y < MIN_INTEGRAL) integral_y = MIN_INTEGRAL;
 
-  // Control signal
-  float output_y = kp*error_y + kd*derivative_y + ki*integral_y;
-  
+  float output_y;
+   if (y_ball_pixel < 150 || y_ball_pixel > 350 ){
+     // Control signal
+    output_y = kp*error_y + kd*SCALE*derivative_y + ki*integral_y;
+    }else{
+    output_y = kp*error_y + kd*derivative_y + ki*integral_y;
+  }
+
+ 
   // Serial.print(error_y);
   // Serial.print("       ");
   // Serial.print(errorPrev_y);
@@ -398,10 +407,14 @@ float PID_Helper_x(float target_pos_x, float curr_pos_x) {
   if (integral_x > MAX_INTEGRAL) integral_x = MAX_INTEGRAL;
   if (integral_x < MIN_INTEGRAL) integral_x = MIN_INTEGRAL;
 
-  // Control signal
-  float output_x = kp*error_x + kd*derivative_x + ki*integral_x;
+  float output_x;
+  if (x_ball_pixel < 200 || x_ball_pixel > 400 ){
+      output_x = kp*error_x + kd*SCALE*derivative_x + ki*integral_x;
+  }else{
+ // Control signal
+  output_x = kp*error_x + kd*derivative_x + ki*integral_x;
+  }
 
-  
   //Serial.print("       ");
 
   // Serial.print(kp*error_x);
