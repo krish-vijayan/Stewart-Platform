@@ -18,9 +18,8 @@ const int enPinStepper3 = 6; //enable Pin (ENA+)
 const int buttonpin = 4;
 
 // --------------PID Constants----------------------
-float kp = 0.020;//0.005; //*1 // MUCH HIGHER
-float kd = 0.00045;//06; //*2 0005
-// float ki = 0.006; //*3
+float kp = 0.020; //*1 // MUCH HIGHER
+float kd = 0.00035;//0.00045;
 float ki = 0.006; //*3
 
 //curr best
@@ -81,8 +80,11 @@ int LED_Byte = 0;
 int byteCounter = 0;  // Track which byte we're reading
 int x_high = 0, x_low = 0, y_high = 0, y_low = 0;
 
-// -------------Kd Scaling------------------
+// -------------Kp & Kd Scaling------------------
 const int SCALE = 1.25;
+
+const int CENTER[2] = {300,240};
+const int MARGIN = 60;
 
 // --------------Stepper Instances-----------------
 AccelStepper stepper1(AccelStepper::DRIVER, stepPinStepper1, dirPinStepper1); //create instance of stepper
@@ -150,7 +152,7 @@ void loop() {
   // }
   
 
-  PID(300, 240);
+  PID(CENTER[0], CENTER[1]);
   
   stepper1.moveTo(angleToStep(motorAngles[0]));
   stepper2.moveTo(angleToStep(motorAngles[1]));
@@ -342,12 +344,19 @@ float PID_Helper_y(float target_pos_y, float curr_pos_y) {
   if (integral_y < MIN_INTEGRAL) integral_y = MIN_INTEGRAL;
 
   float output_y;
-   if (y_ball_pixel < 150 || y_ball_pixel > 350 ){
-     // Control signal
-    output_y = kp*error_y + kd*SCALE*derivative_y + ki*integral_y;
+
+    if ((y_ball_pixel < CENTER[0] - MARGIN || y_ball_pixel > CENTER[0] - MARGIN) ){
+      output_y = kp*SCALE*error_y + kd*SCALE*derivative_y + ki*SCALE*integral_y;
     }else{
-    output_y = kp*error_y + kd*derivative_y + ki*integral_y;
-  }
+      output_y = kp*error_y + kd*derivative_y + ki*integral_y;
+    }
+
+  //  if (y_ball_pixel < CENTER[1] - MARGIN || y_ball_pixel > CENTER[1] + MARGIN ){
+  //    // Control signal
+  //   output_y = kp*error_y + kd*SCALE*derivative_y + ki*integral_y;
+  //   }else{
+  //   output_y = kp*error_y + kd*derivative_y + ki*integral_y;
+  // }
 
  
   // Serial.print(error_y);
@@ -372,7 +381,8 @@ float PID_Helper_y(float target_pos_y, float curr_pos_y) {
 float PID_Helper_x(float target_pos_x, float curr_pos_x) {
   // Find time difference
   long currT_x = micros();
-  float deltaT_x = ((float) (currT_x - prevT_x))/( 1.0e6 ); //determine change in time
+  float deltaT_x = ((float) (currT_x - prevT_x))/( 1.0e6 ); //determine change in time  Serial.print(" PREV D ");
+
   prevT_x = currT_x; //reset current time
 
   // Note: Ball Position is in pixels
@@ -390,9 +400,18 @@ float PID_Helper_x(float target_pos_x, float curr_pos_x) {
   // Serial.print(float((error_x - errorPrev_x)/(deltaT_x)));
   // Serial.print("       ");
   // Serial.print(deltaT_x);
-  // Serial.print("       ");
-  // Serial.print(derivative_x);
-  // Serial.print("       ");
+
+  // Serial.print("X Coord");
+  // Serial.print(curr_pos_x);
+
+  // Serial.print("  X ERROR: ");
+  // Serial.print(error_x);
+
+  // Serial.print("  PREV ERROR ");
+  // Serial.print(errorPrev_x);
+
+  // Serial.print("  Derivative X ");
+  // Serial.println(derivative_x);
 
   errorPrev_x = error_x;
 
@@ -408,12 +427,21 @@ float PID_Helper_x(float target_pos_x, float curr_pos_x) {
   if (integral_x < MIN_INTEGRAL) integral_x = MIN_INTEGRAL;
 
   float output_x;
-  if (x_ball_pixel < 200 || x_ball_pixel > 400 ){
-      output_x = kp*error_x + kd*SCALE*derivative_x + ki*integral_x;
-  }else{
- // Control signal
-  output_x = kp*error_x + kd*derivative_x + ki*integral_x;
-  }
+  if ((x_ball_pixel < CENTER[0] - MARGIN || x_ball_pixel > CENTER[0] - MARGIN)){
+        output_x = kp*SCALE*error_x + kd*SCALE*derivative_x + ki*SCALE*integral_x;
+    }else{
+       output_x = kp*error_x + kd*derivative_x + ki*integral_x;
+    }
+
+
+//   if (x_ball_pixel < CENTER[0] - MARGIN || x_ball_pixel > CENTER[0] - MARGIN ){
+//       output_x = kp*error_x + kd*SCALE*derivative_x + ki*integral_x;
+//   }else{
+//  // Control signal
+//   output_x = kp*error_x + kd*derivative_x + ki*integral_x;
+//   }
+
+
 
   //Serial.print("       ");
 
