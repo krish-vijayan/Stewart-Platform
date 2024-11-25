@@ -18,16 +18,26 @@ const int enPinStepper3 = 6; //enable Pin (ENA+)
 const int buttonpin = 4;
 
 // --------------PID Constants----------------------
-float kp = 0.03;//0.005; //*1 // MUCH HIGHER
-float kd = 0.0005;//06; //*2
-float ki = 0.000; //*3
+float kp = 0.020;//0.005; //*1 // MUCH HIGHER
+float kd = 0.0004;//06; //*2 0005
+float ki = 0.006; //*3
+
+//curr best
+// float kp = 0.020;//0.005; //*1 // MUCH HIGHER
+// float kd = 0.0004;//06; //*2 0005
+// float ki = 0.006; //*3
+
+
+// float kp = 0.0;//0.005; //*1 // MUCH HIGHER
+// float kd = 0.0;//06; //*2
+// float ki = 0.007; //*3
 // float kp = 0.5;//0.068; //*1 // MUCH HIGHER
 // float kd = 0;//06; //*2
 // float ki = 0; //*3
 
 // Define maximum and minimum integral limits
-const float MAX_INTEGRAL = 100.0;
-const float MIN_INTEGRAL = -100.0;
+const float MAX_INTEGRAL = 150.0;
+const float MIN_INTEGRAL = -150.0;
 
 long prevT_x = 0; //previous time
 float errorPrev_x = 0; //previous error
@@ -53,7 +63,7 @@ int link2_length = 75;
 int motor_radius = 75;
 int platform_radius = 90;
 
-int MAX_HEIGHT = 105;//  ~119 in CAD
+int MAX_HEIGHT = 100;//  ~119 in CAD
 int MIN_HEIGHT = 60; //49.98
 
 // --------------Calibration Constants-----------------
@@ -91,22 +101,22 @@ void setup() {
   pinMode(buttonpin, INPUT_PULLUP);
 
   stepper1.disableOutputs(); //disable outputs initially
-  stepper1.setMaxSpeed(15000);
+  stepper1.setMaxSpeed(17000);
   stepper1.setCurrentPosition(0); //zero current stepper position
   stepper1.enableOutputs(); //enable outputs for motor
-  stepper1.setAcceleration(7000);
+  stepper1.setAcceleration(8000);
 
   stepper2.disableOutputs(); //disable outputs initially
-  stepper2.setMaxSpeed(15000);
+  stepper2.setMaxSpeed(17000);
   stepper2.setCurrentPosition(0); //zero current stepper position
   stepper2.enableOutputs(); //enable outputs for motor
-  stepper2.setAcceleration(7000);
+  stepper2.setAcceleration(8000);
 
   stepper3.disableOutputs(); //disable outputs initially
-  stepper3.setMaxSpeed(15000);
+  stepper3.setMaxSpeed(17000);
   stepper3.setCurrentPosition(0); //zero current stepper position
   stepper3.enableOutputs(); //enable outputs for motor
-  stepper3.setAcceleration(7000);
+  stepper3.setAcceleration(8000);
 
   while (digitalRead(buttonpin)==LOW){
 
@@ -129,15 +139,15 @@ void loop() {
   // Serial.print("y position ");
   // Serial.println(y_ball_pixel);
 
-  if (Z[0] == MAX_HEIGHT || Z[1] == MAX_HEIGHT || Z[2] == MAX_HEIGHT){
-    //Serial.print("HEIGHTS: ");
-    Serial.println(Z[0]);
-    Serial.println(Z[1]);
-    Serial.println(Z[2]);
-  }
+  // if (Z[0] == MAX_HEIGHT || Z[1] == MAX_HEIGHT || Z[2] == MAX_HEIGHT){
+  //   //Serial.print("HEIGHTS: ");
+  //   Serial.println(Z[0]);
+  //   Serial.println(Z[1]);
+  //   Serial.println(Z[2]);
+  // }
   
 
-  PID(290, 230);
+  PID(300, 240);
   
   stepper1.moveTo(angleToStep(motorAngles[0]));
   stepper2.moveTo(angleToStep(motorAngles[1]));
@@ -393,6 +403,12 @@ float PID_Helper_x(float target_pos_x, float curr_pos_x) {
 
   
   //Serial.print("       ");
+
+  // Serial.print(kp*error_x);
+  // Serial.print("   ");
+  // Serial.print(kd*derivative_x);
+  // Serial.print("   ");
+  // Serial.println(ki*integral_x);
 
   // The outputs here are the angles we need to perform inv kinematics on (theta_x, theta_y)
   return output_x;
